@@ -24,7 +24,7 @@ import rclpy.node
 from rclpy.parameter import Parameter
 
 # Note: this package is located at /opt/ros/humble/lib/python/site-packages, where
-#       there's a file named "rmf_adapter.cpython-310-x86_64-linux-gnu.so"
+#       there's a file named "rmf_adapter.cpython-310-x86_64-linux-gnu.so" 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
 import rmf_adapter.battery as battery
