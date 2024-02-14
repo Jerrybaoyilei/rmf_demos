@@ -94,6 +94,7 @@ class State:
         self.gps_pos[0] = svy21_xy[1]
         self.gps_pos[1] = svy21_xy[0]
 
+    # Note: if the task_id in params is the same as the task_id in teh last_path_request
     def is_expected_task_id(self, task_id):
         if self.last_path_request is not None:
             if task_id != self.last_path_request.task_id:
@@ -109,6 +110,7 @@ class FleetManager(Node):
 
         self.gps = False
         self.offset = [0, 0]
+        # Note: if config file has valid reference_coordinates and offset, set offset
         if 'reference_coordinates' in self.config and \
                 'offset' in self.config['reference_coordinates']:
             assert len(self.config['reference_coordinates']['offset']) > 1, \
@@ -122,13 +124,16 @@ class FleetManager(Node):
         self.docks = {}  # Map dock name to waypoints
 
         for robot_name, robot_config in self.config["robots"].items():
+            # Note: so it seems like we initialize each robot with an empty "State"
             self.robots[robot_name] = State()
         assert(len(self.robots) > 0)
 
+        # Note: define the profile based on the footprint and vicinity info in the config file 
         profile = traits.Profile(geometry.make_final_convex_circle(
             self.config['rmf_fleet']['profile']['footprint']),
             geometry.make_final_convex_circle(
                 self.config['rmf_fleet']['profile']['vicinity']))
+        # Note: define the vehicle traits base don linear and angular limits in the config file
         self.vehicle_traits = traits.VehicleTraits(
             linear=traits.Limits(
                 *self.config['rmf_fleet']['limits']['linear']),
