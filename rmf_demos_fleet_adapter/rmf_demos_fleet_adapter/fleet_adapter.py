@@ -23,6 +23,8 @@ import rclpy
 import rclpy.node
 from rclpy.parameter import Parameter
 
+# Note: this package is located at /opt/ros/humble/lib/python/site-packages, where
+#       there's a file named "rmf_adapter.cpython-310-x86_64-linux-gnu.so"
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
 import rmf_adapter.battery as battery
@@ -44,6 +46,8 @@ from rclpy.qos import qos_profile_system_default
 from .RobotCommandHandle import RobotCommandHandle
 from .RobotClientAPI import RobotAPI
 
+import logging
+logging.basicConfig(filename='jerry_fleet_adapter.log',level=logging.INFO)
 # ------------------------------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------------------------------
@@ -52,9 +56,12 @@ from .RobotClientAPI import RobotAPI
 def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
     # Profile and traits
     fleet_config = config_yaml['rmf_fleet']
+    # Note: doc: https://osrf.github.io/rmf_fleet_adapter_python/rmf_adapter.vehicletraits.html#Profile
     profile = traits.Profile(geometry.make_final_convex_circle(
         fleet_config['profile']['footprint']),
         geometry.make_final_convex_circle(fleet_config['profile']['vicinity']))
+    # Note: doc: https://osrf.github.io/rmf_fleet_adapter_python/rmf_adapter.vehicletraits.html#VehicleTraits
+    # Note: linear and angular velocity and accelration, in m/s, m/s^2, rad/s, rad/s^2 respectively
     vehicle_traits = traits.VehicleTraits(
         linear=traits.Limits(*fleet_config['limits']['linear']),
         angular=traits.Limits(*fleet_config['limits']['angular']),
@@ -81,6 +88,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         fleet_config['tool_system']['power'])
 
     # Power sinks
+    # Note: for diff between Motion and Deive Power Sinks, see Notion note "fleet_adapter.py"
     motion_sink = battery.SimpleMotionPowerSink(battery_sys, mech_sys)
     ambient_sink = battery.SimpleDevicePowerSink(
         battery_sys, ambient_power_sys)
@@ -101,9 +109,11 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
     node.declare_parameter('server_uri', rclpy.Parameter.Type.STRING)
     server_uri = node.get_parameter(
         'server_uri').get_parameter_value().string_value
+    logging.info(f"server_uri: {server_uri}")
     if server_uri == "":
         server_uri = None
 
+    # Note: adapter.add_fleet() returns a rmf_adapter.FleetUpdateHandle object
     fleet_handle = adapter.add_fleet(
         fleet_name, vehicle_traits, nav_graph, server_uri)
 
@@ -118,6 +128,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
     finishing_request = fleet_config['task_capabilities']['finishing_request']
     node.get_logger().info(f"Finishing request: [{finishing_request}]")
     # Set task planner params
+    # Note: doc: https://openrmf.readthedocs.io/projects/rmf-ros2/en/latest/api/classrmf__fleet__adapter_1_1agv_1_1FleetUpdateHandle.html?highlight=set_task_planner_params#_CPPv4N17rmf_fleet_adapter3agv17FleetUpdateHandle23set_task_planner_paramsENSt10shared_ptrIN11rmf_battery3agv13BatterySystemEEENSt10shared_ptrIN11rmf_battery15MotionPowerSinkEEENSt10shared_ptrIN11rmf_battery15DevicePowerSinkEEENSt10shared_ptrIN11rmf_battery15DevicePowerSinkEEEddbN8rmf_task22ConstRequestFactoryPtrE
     ok = fleet_handle.set_task_planner_params(
         battery_sys,
         motion_sink,
@@ -149,13 +160,17 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
             return True
         else:
             return False
-
+    
+    # Note: partial() fixes the first param of _task_request_check to be task_capabilities
+    #       defined above
     fleet_handle.accept_task_requests(
         partial(_task_request_check, task_capabilities))
 
+    # Note: doc: https://docs.ros.org/en/humble/p/rmf_fleet_adapter/generated/classrmf__fleet__adapter_1_1agv_1_1FleetUpdateHandle_1_1Confirmation.html#exhale-class-classrmf-fleet-adapter-1-1agv-1-1fleetupdatehandle-1-1confirmation
     def _consider(description: dict):
         confirm = adpt.fleet_update_handle.Confirmation()
         confirm.accept()
+        # returns a Confirmation object which accepts anything
         return confirm
 
     # Configure this fleet to perform any kind of teleop action
@@ -169,6 +184,10 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                              description: dict,
                              execution:
                              adpt.robot_update_handle.ActionExecution):
+            # Note: enter the lock; after execution is done inside this with block, 
+            #           lock is released
+            #       Set the action_waypoint_index to the description one or the last
+            #           known waypoint
             with cmd_handle._lock:
                 if len(description) > 0 and\
                         description in cmd_handle.graph.keys:
@@ -182,11 +201,13 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                 cmd_handle.action_execution = execution
         # Set the action_executioner for the robot
         cmd_handle.update_handle.set_action_executor(_action_executor)
+        # Note: in robot var initialized below, config > robot_config > robots_config > config.yaml
         if ("max_delay" in cmd_handle.config.keys()):
             max_delay = cmd_handle.config["max_delay"]
             cmd_handle.node.get_logger().info(
                 f"Setting max delay to {max_delay}s")
             cmd_handle.update_handle.set_maximum_delay(max_delay)
+        # Note: if there's only 1 waypoint (i.e. charger), its index is 0
         if (cmd_handle.charger_waypoint_index <
                 cmd_handle.graph.num_waypoints):
             cmd_handle.update_handle.set_charger_waypoint(
@@ -206,13 +227,17 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
 
     # Initialize robots for this fleet
     robots = {}
+    # Note: initially, all robots are missing (i.e., not added to the fleet)
     missing_robots = config_yaml['robots']
 
     def _add_fleet_robots():
         while len(missing_robots) > 0:
             time.sleep(0.2)
+            # Note: keys are robot names, e.g., tinyRobot1, tinyRobot2
             for robot_name in list(missing_robots.keys()):
                 node.get_logger().debug(f"Connecting to robot: {robot_name}")
+                # Note: Get HTTP Response for robot_name robot; data method is defined
+                #           inside RobotClientAPI.py
                 data = api.data(robot_name)
                 if data is None:
                     continue
@@ -224,6 +249,8 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                     initial_waypoint = rmf_config['start']['waypoint']
                     if 'position' in data['data']:
                         initial_orientation = data['data']['position']['yaw']
+                    # Note: default orientation for the robot in the config file if there is no
+                        #       position data in data['data']
                     else:
                         initial_orientation = \
                             rmf_config['start']['orientation']
@@ -232,12 +259,15 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                     time_now = adapter.now()
                     # No need to offset robot and RMF crs for demos
                     position = api.position(robot_name)
+                    # Note: cannot get initial position, cannot start robot
                     if position is None:
                         node.get_logger().info(
                             f'Failed to get initial position of {robot_name}'
                         )
                         continue
 
+                    # Note: have both initial waypoint and initial orientation, 
+                    #           can start the robot with these 2 params
                     if (initial_waypoint is not None) and\
                             (initial_orientation is not None):
                         node.get_logger().info(
@@ -251,10 +281,15 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         starts = [plan.Start(time_now,
                                              initial_waypoint_index,
                                              initial_orientation)]
+                    # Note: if at least one of the initial waypoint and initial orientation
+                        #       is missing
                     else:
                         node.get_logger().info(
                             f"Running compute_plan_starts for robot: "
                             "{robot_name}")
+                        # Note: attempts to find the most suitable waypoints and lanes
+                        #           in order to start planning
+                        #       doc: https://docs.ros.org/en/ros2_packages/rolling/api/rmf_traffic/generated/function_Planner_8hpp_1a2fb0549d3d136e586b19b6952606a960.html
                         starts = plan.compute_plan_starts(
                             nav_graph,
                             rmf_config['start']['map_name'],
@@ -299,6 +334,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         node.get_logger().error(
                             f"Failed to initialize robot: {robot_name}")
 
+                    # Note: robot initialized, remove from missing robot list
                     del missing_robots[robot_name]
 
                 else:
@@ -307,6 +343,8 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         f"{robot_name} not found, trying again...")
         return
 
+    # Note: initialize the thread to add robots. This thread runs separate from the
+    #           main thread
     add_robots = threading.Thread(target=_add_fleet_robots, args=())
     add_robots.start()
 
@@ -317,20 +355,24 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         if msg.fleet_name is None or msg.fleet_name != fleet_name:
             return
 
+        # Note: on the fleet level, specify a set of lanes that should be open/closed
+        #           doc: https://docs.ros.org/en/humble/p/rmf_fleet_adapter/generated/classrmf__fleet__adapter_1_1agv_1_1FleetUpdateHandle.html#exhale-class-classrmf-fleet-adapter-1-1agv-1-1fleetupdatehandle
         fleet_handle.open_lanes(msg.open_lanes)
         fleet_handle.close_lanes(msg.close_lanes)
 
         newly_closed_lanes = []
 
+        # Note: add newly closed lanes to closed_lanes and newly_closed_lanes
         for lane_idx in msg.close_lanes:
             if lane_idx not in closed_lanes:
                 newly_closed_lanes.append(lane_idx)
                 closed_lanes.append(lane_idx)
-
+        # Note: some lanes in closed_lanes might be opened
         for lane_idx in msg.open_lanes:
             if lane_idx in closed_lanes:
                 closed_lanes.remove(lane_idx)
 
+        # Note: on the robot level, add the newly closed lanes
         for robot_name, robot in robots.items():
             robot.newly_closed_lanes(newly_closed_lanes)
 
@@ -344,7 +386,9 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         depth=1,
         reliability=Reliability.RELIABLE,
         durability=Durability.TRANSIENT_LOCAL)
-
+    
+    # Note: params: message type, topic name, callback, quality of service proifle
+    #       doc: https://docs.ros2.org/foxy/api/rclpy/api/node.html
     node.create_subscription(
         LaneRequest,
         'lane_closure_requests',
@@ -366,11 +410,16 @@ def main(argv=sys.argv):
     # Init rclpy and adapter
     rclpy.init(args=argv)
     adpt.init_rclcpp()
+    # Note: return a list of only the non-ROS command line arguments
+    #       doc: https://docs.ros.org/en/iron/p/rclpy/rclpy.utilities.html
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
+    # Note: log what are the args_without_ros
+    logging.info(f"args_without_ros: {args_without_ros}")
 
     parser = argparse.ArgumentParser(
         prog="fleet_adapter",
         description="Configure and spin up the fleet adapter")
+    # Note: check the log file and -c, -n, -sim will make sense
     parser.add_argument("-c", "--config_file", type=str, required=True,
                         help="Path to the config.yaml file")
     parser.add_argument("-n", "--nav_graph", type=str, required=True,
@@ -396,6 +445,7 @@ def main(argv=sys.argv):
         param = Parameter("use_sim_time", Parameter.Type.BOOL, True)
         node.set_parameters([param])
 
+    # Note: this seems useless as adapter was never used; commented it out but the demo still ran 
     adapter = initialize_fleet(
         config_yaml,
         nav_graph_path,
