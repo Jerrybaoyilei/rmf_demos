@@ -51,7 +51,7 @@ from pydantic import BaseModel
 import threading
 app = FastAPI()
 
-# Note: think Student, Delivery, etc. Real world objects
+# Note: think Student, Delivery, etc. Real world objects.
 #           doc: https://docs.pydantic.dev/latest/
 class Request(BaseModel):
     map_name: Optional[str] = None
