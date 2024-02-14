@@ -214,6 +214,7 @@ class FleetManager(Node):
                         return response
                     response['data']['all_robots'].append(
                         self.get_robot_state(state, robot_name))
+            # Note: robot name specifid, will only check status of this robot
             else:
                 state = self.robots.get(robot_name)
                 if state is None or state.state is None:
@@ -226,6 +227,7 @@ class FleetManager(Node):
                   response_model=Response)
         async def navigate(robot_name: str, cmd_id: int, dest: Request):
             response = {'success': False, 'msg': ''}
+            # Note: non-existent robot or invalid destination
             if (robot_name not in self.robots or len(dest.destination) < 1):
                 return response
 
@@ -240,17 +242,22 @@ class FleetManager(Node):
             target_x -= self.offset[0]
             target_y -= self.offset[1]
 
+            # Note: retreieves current time and convert to ROS message type
             t = self.get_clock().now().to_msg()
 
             path_request = PathRequest()
             robot = self.robots[robot_name]
+            # Note: I feel like this part can be optimized. cur_loc comes first, since 
+            #           other three uses it
             cur_x = robot.state.location.x
             cur_y = robot.state.location.y
             cur_yaw = robot.state.location.yaw
             cur_loc = robot.state.location
             path_request.path.append(cur_loc)
 
+            # Note: defined below; calculates the straightline distance between two points
             disp = self.disp([target_x, target_y], [cur_x, cur_y])
+            # Note: duration has two parts: straightline duration and angular duration
             duration = int(disp/self.vehicle_traits.linear.nominal_velocity) +\
                 int(abs(abs(cur_yaw) - abs(target_yaw)) /
                     self.vehicle_traits.rotational.nominal_velocity)
