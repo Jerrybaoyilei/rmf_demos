@@ -143,17 +143,22 @@ class FleetManager(Node):
         self.vehicle_traits.differential.reversible =\
             self.config['rmf_fleet']['reversible']
 
+        # Note: doc: https://socket.io/docs/v4/
         self.sio = socketio.Client()
 
+        # Note: set up robot's gps position info
         @self.sio.on("/gps")
         def message(data):
             try:
                 robot = json.loads(data)
                 robot_name = robot['robot_id']
+                # Note: robots[robot_name] is a State() object, and calling `gps_to_xy` changes
+                #           its self.gps_pos
                 self.robots[robot_name].gps_to_xy(robot)
             except KeyError as e:
                 self.get_logger().info(f"Malformed GPS Message!: {e}")
 
+        # Note: self.gps is true if there is 'offset' in 'reference_coordinates' in self.config
         if self.gps:
             while True:
                 try:
@@ -165,6 +170,7 @@ class FleetManager(Node):
                         f"http://0.0.0.0:8080..")
                     time.sleep(1)
 
+        # Note: `create_subscription` belongs to the Node class
         self.create_subscription(
             RobotState,
             'robot_state',
@@ -176,13 +182,15 @@ class FleetManager(Node):
             depth=1,
             reliability=Reliability.RELIABLE,
             durability=Durability.TRANSIENT_LOCAL)
-
+        # Note: params: message type, topic name, callback, quality of service proifle
+        #       doc: https://docs.ros2.org/foxy/api/rclpy/api/node.html
         self.create_subscription(
             DockSummary,
             'dock_summary',
             self.dock_summary_cb,
             qos_profile=transient_qos)
 
+        # Note: params: message type, topic name, quality of service profile
         self.path_pub = self.create_publisher(
             PathRequest,
             'robot_path_requests',
@@ -196,9 +204,11 @@ class FleetManager(Node):
                 'success': False,
                 'msg': ''
             }
+            # Note: robot_name is not specified, checking status of all robots
             if robot_name is None:
                 response['data']['all_robots'] = []
                 for robot_name in self.robots:
+                    # state will be a State() object
                     state = self.robots.get(robot_name)
                     if state is None or state.state is None:
                         return response
