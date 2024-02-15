@@ -40,6 +40,7 @@ from datetime import timedelta
 
 # States for RobotCommandHandle's state machine used when guiding robot along
 # a new path
+# Note: this is different from rmf_fleet_msgs.msg.RobotState in fleet_manager.py
 class RobotState(enum.IntEnum):
     IDLE = 0
     MOVING = 1
@@ -54,6 +55,9 @@ class PlanWaypoint:
         self.position = wp.position
         self.time = wp.time
         self.graph_index = wp.graph_index
+        # Note: graph indices of the lanes that will be traversed on the way to 
+        #           this Waypoint
+        #       doc: https://docs.ros.org/en/ros2_packages/rolling/api/rmf_traffic/generated/classrmf__traffic_1_1agv_1_1Plan_1_1Waypoint.html
         self.approach_lanes = wp.approach_lanes
 
 
