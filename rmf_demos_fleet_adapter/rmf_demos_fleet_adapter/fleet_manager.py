@@ -57,8 +57,6 @@ logging.basicConfig(
 
 # Note: think Student, Delivery, etc. Real world objects.
 #           doc: https://docs.pydantic.dev/latest/
-
-
 class Request(BaseModel):
     map_name: Optional[str] = None
     task: Optional[str] = None
@@ -100,7 +98,7 @@ class State:
         self.gps_pos[0] = svy21_xy[1]
         self.gps_pos[1] = svy21_xy[0]
 
-    # Note: if the task_id in params is the same as the task_id in teh last_path_request
+    # Note: if the task_id in params is the same as the task_id in the last_path_request
     def is_expected_task_id(self, task_id):
         if self.last_path_request is not None:
             if task_id != self.last_path_request.task_id:
@@ -261,7 +259,8 @@ class FleetManager(Node):
             cur_loc = robot.state.location
             path_request.path.append(cur_loc)
 
-            # Note: defined below; calculates the straightline distance between two points
+            # Note: defined in a function some lines below; calculates the straightline 
+            #           distance between two points
             disp = self.disp([target_x, target_y], [cur_x, cur_y])
             # Note: duration has two parts: straightline duration and angular duration
             duration = int(disp/self.vehicle_traits.linear.nominal_velocity) +\
@@ -315,6 +314,7 @@ class FleetManager(Node):
             if self.debug:
                 print(f'Sending stop request for {robot_name}: {cmd_id}')
             robot.last_path_request = path_request
+            # Note: destination is None because robot has reached destination
             robot.destination = None
 
             response['success'] = True
@@ -339,6 +339,8 @@ class FleetManager(Node):
             previous_wp = [cur_x, cur_y, cur_yaw]
             target_loc = Location()
             path_request.path.append(cur_loc)
+            # Note: add waypoints in self.docks related to this task into path_request,
+            #           and each time updating the previous_wp
             for wp in self.docks[task.task]:
                 target_loc = wp
                 path_request.path.append(target_loc)
@@ -369,11 +371,14 @@ class FleetManager(Node):
             return response
 
     def robot_state_cb(self, msg):
+        # Note: check if the robot name is valid (i.e. in the robots fleet)
         if (msg.name in self.robots):
             robot = self.robots[msg.name]
+            # Note: case 1 - expired message, resend latest task request
             if not robot.is_expected_task_id(msg.task_id) and \
-                    not robot.mode_teleop:
+                    not robot.mode_teleop: 
                 # This message is out of date, so disregard it.
+                # Note: disregard the msg and re-publish the latest path request
                 if robot.last_path_request is not None:
                     # Resend the latest task request for this robot, in case
                     # the message was dropped.
@@ -386,11 +391,16 @@ class FleetManager(Node):
                     self.path_pub.publish(robot.last_path_request)
                 return
 
+            # Note: robot.state is of type RobotState 
             robot.state = msg
             # Check if robot has reached destination
+            # Note: case 2 - message not expired, but robot reached destination
             if robot.destination is None:
                 return
 
+            # Note: case 3 - message not expired, robot hasn't reached destination, 
+            #           but in idle mode or charging mode, and no path left, then
+            #           robot must've reached destination
             if (
                 (
                     msg.mode.mode == RobotMode.MODE_IDLE
@@ -410,9 +420,13 @@ class FleetManager(Node):
                 robot.last_completed_request = completed_request
 
     def dock_summary_cb(self, msg):
+        # Note: understand each key in msg.docks as a starting point to represent a task, 
+        #           and each task is to be completed by one fleet (type) of robots
         for fleet in msg.docks:
             if (fleet.fleet_name == self.fleet_name):
                 for dock in fleet.params:
+                    # Note: this function basically maps out paths for different tasks,
+                    #           which are assigned to different fleets of robots
                     self.docks[dock.start] = dock.path
 
     def get_robot_state(self, robot: State, robot_name):
