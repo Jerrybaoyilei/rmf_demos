@@ -146,6 +146,7 @@ class RobotAPI:
         if response is not None:
             arrival = response['data'].get('destination_arrival')
             if arrival is not None:
+                # Note: cmd_id mismatch
                 if arrival.get('cmd_id') != cmd_id:
                     return None
                 return arrival.get('duration')
@@ -176,6 +177,8 @@ class RobotAPI:
             and 1.0. Else return None if any errors are encountered'''
         response = self.data(robot_name)
         if response is not None:
+            # Note: seems like the code is confident that response['data']['battery']
+            #           won't be None
             return response['data']['battery']/100.0
         else:
             return None
