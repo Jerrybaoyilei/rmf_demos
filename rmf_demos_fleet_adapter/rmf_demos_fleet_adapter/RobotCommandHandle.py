@@ -153,6 +153,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             reliability=Reliability.RELIABLE,
             durability=Durability.TRANSIENT_LOCAL)
 
+        # Note: params: message type, topic name, callback, quality of service proifle
+        #       doc: https://docs.ros2.org/foxy/api/rclpy/api/node.html
         self.node.create_subscription(
             DockSummary,
             'dock_summary',
@@ -191,7 +193,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 return True
         return False
 
-    def clear(self):
+    def clear(self): 
         self.requested_waypoints = []
         self.remaining_waypoints = []
         self.state = RobotState.IDLE
