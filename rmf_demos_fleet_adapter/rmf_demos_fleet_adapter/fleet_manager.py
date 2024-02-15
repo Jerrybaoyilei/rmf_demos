@@ -434,6 +434,7 @@ class FleetManager(Node):
         if self.gps:
             position = copy.deepcopy(robot.gps_pos)
         else:
+            # Note: robot.state (i.e. State.state) is of type RobotState
             position = [robot.state.location.x, robot.state.location.y]
         angle = robot.state.location.yaw
         data['robot_name'] = robot_name
@@ -452,10 +453,12 @@ class FleetManager(Node):
             dist_to_target =\
                 self.disp(position, [destination.x, destination.y])
             ori_delta = abs(abs(angle) - abs(destination.yaw))
+            # Note: normalize ori_delta to "-pi to pi" range
             if ori_delta > np.pi:
                 ori_delta = ori_delta - (2 * np.pi)
             if ori_delta < -np.pi:
                 ori_delta = (2 * np.pi) + ori_delta
+            # Note: duration is made up of linear duration and angular duration
             duration = (dist_to_target /
                         self.vehicle_traits.linear.nominal_velocity +
                         ori_delta /
