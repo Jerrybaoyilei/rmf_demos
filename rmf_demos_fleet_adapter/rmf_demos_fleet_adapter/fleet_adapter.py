@@ -24,7 +24,7 @@ import rclpy.node
 from rclpy.parameter import Parameter
 
 # Note: this package is located at /opt/ros/humble/lib/python/site-packages, where
-#       there's a file named "rmf_adapter.cpython-310-x86_64-linux-gnu.so" 
+#       there's a file named "rmf_adapter.cpython-310-x86_64-linux-gnu.so"
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
 import rmf_adapter.battery as battery
@@ -47,7 +47,8 @@ from .RobotCommandHandle import RobotCommandHandle
 from .RobotClientAPI import RobotAPI
 
 import logging
-logging.basicConfig(filename='jerry_fleet_adapter.log',level=logging.INFO)
+logging.basicConfig(
+    filename='/home/jbao/rmf_ws/log/jerry_log/fleet_adapter.log', level=logging.INFO)
 # ------------------------------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------------------------------
@@ -160,7 +161,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
             return True
         else:
             return False
-    
+
     # Note: partial() fixes the first param of _task_request_check to be task_capabilities
     #       defined above
     fleet_handle.accept_task_requests(
@@ -184,7 +185,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                              description: dict,
                              execution:
                              adpt.robot_update_handle.ActionExecution):
-            # Note: enter the lock; after execution is done inside this with block, 
+            # Note: enter the lock; after execution is done inside this with block,
             #           lock is released
             #       Set the action_waypoint_index to the description one or the last
             #           known waypoint
@@ -266,7 +267,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         )
                         continue
 
-                    # Note: have both initial waypoint and initial orientation, 
+                    # Note: have both initial waypoint and initial orientation,
                     #           can start the robot with these 2 params
                     if (initial_waypoint is not None) and\
                             (initial_orientation is not None):
@@ -386,7 +387,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         depth=1,
         reliability=Reliability.RELIABLE,
         durability=Durability.TRANSIENT_LOCAL)
-    
+
     # Note: params: message type, topic name, callback, quality of service proifle
     #       doc: https://docs.ros2.org/foxy/api/rclpy/api/node.html
     node.create_subscription(
@@ -445,7 +446,7 @@ def main(argv=sys.argv):
         param = Parameter("use_sim_time", Parameter.Type.BOOL, True)
         node.set_parameters([param])
 
-    # Note: this seems useless as adapter was never used; commented it out but the demo still ran 
+    # Note: this seems useless as adapter was never used; commented it out but the demo still ran
     adapter = initialize_fleet(
         config_yaml,
         nav_graph_path,

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import sys
 import math
 import yaml
@@ -51,8 +52,13 @@ from pydantic import BaseModel
 import threading
 app = FastAPI()
 
+logging.basicConfig(
+    filename='/home/jbao/rmf_ws/log/jerry_log/fleet_manager.log', level=logging.INFO)
+
 # Note: think Student, Delivery, etc. Real world objects.
 #           doc: https://docs.pydantic.dev/latest/
+
+
 class Request(BaseModel):
     map_name: Optional[str] = None
     task: Optional[str] = None
@@ -123,7 +129,7 @@ class FleetManager(Node):
 
         for robot_name, robot_config in self.config["robots"].items():
             self.robots[robot_name] = State()
-        assert(len(self.robots) > 0)
+        assert (len(self.robots) > 0)
 
         profile = traits.Profile(geometry.make_final_convex_circle(
             self.config['rmf_fleet']['profile']['footprint']),
@@ -383,7 +389,7 @@ class FleetManager(Node):
 
     def dock_summary_cb(self, msg):
         for fleet in msg.docks:
-            if(fleet.fleet_name == self.fleet_name):
+            if (fleet.fleet_name == self.fleet_name):
                 for dock in fleet.params:
                     self.docks[dock.start] = dock.path
 
