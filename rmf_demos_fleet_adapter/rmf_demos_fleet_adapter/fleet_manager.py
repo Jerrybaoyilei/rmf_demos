@@ -100,6 +100,7 @@ class State:
         self.gps_pos[0] = svy21_xy[1]
         self.gps_pos[1] = svy21_xy[0]
 
+    # Note: if the task_id in params is the same as the task_id in teh last_path_request
     def is_expected_task_id(self, task_id):
         if self.last_path_request is not None:
             if task_id != self.last_path_request.task_id:
@@ -115,6 +116,7 @@ class FleetManager(Node):
 
         self.gps = False
         self.offset = [0, 0]
+        # Note: if config file has valid reference_coordinates and offset, set offset
         if 'reference_coordinates' in self.config and \
                 'offset' in self.config['reference_coordinates']:
             assert len(self.config['reference_coordinates']['offset']) > 1, \
@@ -128,13 +130,16 @@ class FleetManager(Node):
         self.docks = {}  # Map dock name to waypoints
 
         for robot_name, robot_config in self.config["robots"].items():
+            # Note: so it seems like we initialize each robot with an empty "State"
             self.robots[robot_name] = State()
         assert (len(self.robots) > 0)
 
+        # Note: define the profile based on the footprint and vicinity info in the config file 
         profile = traits.Profile(geometry.make_final_convex_circle(
             self.config['rmf_fleet']['profile']['footprint']),
             geometry.make_final_convex_circle(
                 self.config['rmf_fleet']['profile']['vicinity']))
+        # Note: define the vehicle traits base don linear and angular limits in the config file
         self.vehicle_traits = traits.VehicleTraits(
             linear=traits.Limits(
                 *self.config['rmf_fleet']['limits']['linear']),
@@ -144,17 +149,22 @@ class FleetManager(Node):
         self.vehicle_traits.differential.reversible =\
             self.config['rmf_fleet']['reversible']
 
+        # Note: doc: https://socket.io/docs/v4/
         self.sio = socketio.Client()
 
+        # Note: set up robot's gps position info
         @self.sio.on("/gps")
         def message(data):
             try:
                 robot = json.loads(data)
                 robot_name = robot['robot_id']
+                # Note: robots[robot_name] is a State() object, and calling `gps_to_xy` changes
+                #           its self.gps_pos
                 self.robots[robot_name].gps_to_xy(robot)
             except KeyError as e:
                 self.get_logger().info(f"Malformed GPS Message!: {e}")
 
+        # Note: self.gps is true if there is 'offset' in 'reference_coordinates' in self.config
         if self.gps:
             while True:
                 try:
@@ -166,6 +176,7 @@ class FleetManager(Node):
                         f"http://0.0.0.0:8080..")
                     time.sleep(1)
 
+        # Note: `create_subscription` belongs to the Node class
         self.create_subscription(
             RobotState,
             'robot_state',
@@ -177,13 +188,15 @@ class FleetManager(Node):
             depth=1,
             reliability=Reliability.RELIABLE,
             durability=Durability.TRANSIENT_LOCAL)
-
+        # Note: params: message type, topic name, callback, quality of service proifle
+        #       doc: https://docs.ros2.org/foxy/api/rclpy/api/node.html
         self.create_subscription(
             DockSummary,
             'dock_summary',
             self.dock_summary_cb,
             qos_profile=transient_qos)
 
+        # Note: params: message type, topic name, quality of service profile
         self.path_pub = self.create_publisher(
             PathRequest,
             'robot_path_requests',
@@ -197,14 +210,17 @@ class FleetManager(Node):
                 'success': False,
                 'msg': ''
             }
+            # Note: robot_name is not specified, checking status of all robots
             if robot_name is None:
                 response['data']['all_robots'] = []
                 for robot_name in self.robots:
+                    # state will be a State() object
                     state = self.robots.get(robot_name)
                     if state is None or state.state is None:
                         return response
                     response['data']['all_robots'].append(
                         self.get_robot_state(state, robot_name))
+            # Note: robot name specifid, will only check status of this robot
             else:
                 state = self.robots.get(robot_name)
                 if state is None or state.state is None:
@@ -217,6 +233,7 @@ class FleetManager(Node):
                   response_model=Response)
         async def navigate(robot_name: str, cmd_id: int, dest: Request):
             response = {'success': False, 'msg': ''}
+            # Note: non-existent robot or invalid destination
             if (robot_name not in self.robots or len(dest.destination) < 1):
                 return response
 
@@ -231,17 +248,22 @@ class FleetManager(Node):
             target_x -= self.offset[0]
             target_y -= self.offset[1]
 
+            # Note: retreieves current time and convert to ROS message type
             t = self.get_clock().now().to_msg()
 
             path_request = PathRequest()
             robot = self.robots[robot_name]
+            # Note: I feel like this part can be optimized. cur_loc comes first, since 
+            #           other three uses it
             cur_x = robot.state.location.x
             cur_y = robot.state.location.y
             cur_yaw = robot.state.location.yaw
             cur_loc = robot.state.location
             path_request.path.append(cur_loc)
 
+            # Note: defined below; calculates the straightline distance between two points
             disp = self.disp([target_x, target_y], [cur_x, cur_y])
+            # Note: duration has two parts: straightline duration and angular duration
             duration = int(disp/self.vehicle_traits.linear.nominal_velocity) +\
                 int(abs(abs(cur_yaw) - abs(target_yaw)) /
                     self.vehicle_traits.rotational.nominal_velocity)
