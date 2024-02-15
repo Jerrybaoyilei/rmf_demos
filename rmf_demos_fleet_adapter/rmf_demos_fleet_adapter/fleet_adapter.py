@@ -407,6 +407,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
 # Main
 # ------------------------------------------------------------------------------
 def main(argv=sys.argv):
+    logging.INFO("In the main")
     # Init rclpy and adapter
     rclpy.init(args=argv)
     adpt.init_rclcpp()
