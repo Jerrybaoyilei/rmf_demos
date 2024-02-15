@@ -502,6 +502,7 @@ def main(argv=sys.argv):
     rclpy.init(args=argv)
     adpt.init_rclcpp()
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
+    logging.INFO(f"args_without_ros: {args_without_ros}")
 
     parser = argparse.ArgumentParser(
         prog="fleet_adapter",
