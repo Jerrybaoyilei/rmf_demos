@@ -181,6 +181,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def sleep_for(self, seconds):
         goal_time =\
           self.node.get_clock().now() + Duration(nanoseconds=1e9*seconds)
+        # Note: keep sleeping until the time now is the goal time
         while (self.node.get_clock().now() <= goal_time):
             time.sleep(0.001)
 
@@ -188,6 +189,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         goal_time = (
             self.node.get_clock().now() + Duration(nanoseconds=1e9*seconds)
         )
+        # Note: will always return true, unless the now time is past goal time
         while self.node.get_clock().now() <= goal_time:
             if event.wait(0.001):
                 return True
