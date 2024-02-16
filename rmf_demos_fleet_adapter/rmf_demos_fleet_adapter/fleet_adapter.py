@@ -176,9 +176,11 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
 
     # Configure this fleet to perform any kind of teleop action
     fleet_handle.add_performable_action("teleop", _consider)
+    # fleet_handle.add_performable_action("teleop", ConsiderRequest(description, Confirmation()))
 
     def _updater_inserter(cmd_handle, update_handle):
         """Insert a RobotUpdateHandle."""
+        logging.info(f"update_handle: {update_handle}")
         cmd_handle.update_handle = update_handle
 
         def _action_executor(category: str,
@@ -368,6 +370,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
             if lane_idx not in closed_lanes:
                 newly_closed_lanes.append(lane_idx)
                 closed_lanes.append(lane_idx)
+                
         # Note: some lanes in closed_lanes might be opened
         for lane_idx in msg.open_lanes:
             if lane_idx in closed_lanes:
@@ -380,6 +383,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         state_msg = ClosedLanes()
         state_msg.fleet_name = fleet_name
         state_msg.closed_lanes = closed_lanes
+        # Note: broadcast the closed lane
         closed_lanes_pub.publish(state_msg)
 
     transient_qos = QoSProfile(
