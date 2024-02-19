@@ -139,15 +139,15 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         recharge_soc,
         drain_battery,
         finishing_request)
-    logging.INFO("Below are params for set_task_planner_params(): ")
-    logging.INFO("battery_sys: ", battery_sys)
-    logging.INFO("motion_sink: ", motion_sink)
-    logging.INFO("ambient_sink: ", ambient_sink)
-    logging.INFO("tool_sink: ", tool_sink)
-    logging.INFO("recharge_threshold: ", recharge_threshold)
-    logging.INFO("recharge_soc: ", recharge_soc)
-    logging.INFO("drain_battery: ", drain_battery)
-    logging.INFO("finishing_request: ", finishing_request)
+    logging.info("Below are params for set_task_planner_params(): ")
+    logging.info("battery_sys: ", battery_sys)
+    logging.info("motion_sink: ", motion_sink)
+    logging.info("ambient_sink: ", ambient_sink)
+    logging.info("tool_sink: ", tool_sink)
+    logging.info("recharge_threshold: ", recharge_threshold)
+    logging.info("recharge_soc: ", recharge_soc)
+    logging.info("drain_battery: ", drain_battery)
+    logging.info("finishing_request: ", finishing_request)
     assert ok, ("Unable to set task planner params")
 
     task_capabilities = []
@@ -421,7 +421,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
 # Main
 # ------------------------------------------------------------------------------
 def main(argv=sys.argv):
-    logging.INFO("In the main")
+    logging.info("In the main")
     # Init rclpy and adapter
     rclpy.init(args=argv)
     adpt.init_rclcpp()
