@@ -140,14 +140,14 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
         drain_battery,
         finishing_request)
     logging.info("Below are params for set_task_planner_params(): ")
-    logging.info("battery_sys: ", battery_sys)
-    logging.info("motion_sink: ", motion_sink)
-    logging.info("ambient_sink: ", ambient_sink)
-    logging.info("tool_sink: ", tool_sink)
-    logging.info("recharge_threshold: ", recharge_threshold)
-    logging.info("recharge_soc: ", recharge_soc)
-    logging.info("drain_battery: ", drain_battery)
-    logging.info("finishing_request: ", finishing_request)
+    logging.info(f"battery_sys: {battery_sys}")
+    logging.info(f"motion_sink: {motion_sink}")
+    logging.info(f"ambient_sink: {ambient_sink}")
+    logging.info(f"tool_sink: {tool_sink}", )
+    logging.info(f"recharge_threshold: {recharge_threshold}")
+    logging.info(f"recharge_soc: {recharge_soc}")
+    logging.info(f"drain_battery: drain_battery")
+    logging.info(f"finishing_request: {finishing_request}")
     assert ok, ("Unable to set task planner params")
 
     task_capabilities = []
