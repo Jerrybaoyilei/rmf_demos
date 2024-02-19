@@ -379,7 +379,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
             if lane_idx not in closed_lanes:
                 newly_closed_lanes.append(lane_idx)
                 closed_lanes.append(lane_idx)
-                
+
         # Note: some lanes in closed_lanes might be opened
         for lane_idx in msg.open_lanes:
             if lane_idx in closed_lanes:

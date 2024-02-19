@@ -57,6 +57,8 @@ logging.basicConfig(
 
 # Note: think Student, Delivery, etc. Real world objects.
 #           doc: https://docs.pydantic.dev/latest/
+
+
 class Request(BaseModel):
     map_name: Optional[str] = None
     task: Optional[str] = None
@@ -132,7 +134,7 @@ class FleetManager(Node):
             self.robots[robot_name] = State()
         assert (len(self.robots) > 0)
 
-        # Note: define the profile based on the footprint and vicinity info in the config file 
+        # Note: define the profile based on the footprint and vicinity info in the config file
         profile = traits.Profile(geometry.make_final_convex_circle(
             self.config['rmf_fleet']['profile']['footprint']),
             geometry.make_final_convex_circle(
@@ -251,7 +253,7 @@ class FleetManager(Node):
 
             path_request = PathRequest()
             robot = self.robots[robot_name]
-            # Note: I feel like this part can be optimized. cur_loc comes first, since 
+            # Note: I feel like this part can be optimized. cur_loc comes first, since
             #           other three uses it
             cur_x = robot.state.location.x
             cur_y = robot.state.location.y
@@ -259,7 +261,7 @@ class FleetManager(Node):
             cur_loc = robot.state.location
             path_request.path.append(cur_loc)
 
-            # Note: defined in a function some lines below; calculates the straightline 
+            # Note: defined in a function some lines below; calculates the straightline
             #           distance between two points
             disp = self.disp([target_x, target_y], [cur_x, cur_y])
             # Note: duration has two parts: straightline duration and angular duration
@@ -376,7 +378,7 @@ class FleetManager(Node):
             robot = self.robots[msg.name]
             # Note: case 1 - expired message, resend latest task request
             if not robot.is_expected_task_id(msg.task_id) and \
-                    not robot.mode_teleop: 
+                    not robot.mode_teleop:
                 # This message is out of date, so disregard it.
                 # Note: disregard the msg and re-publish the latest path request
                 if robot.last_path_request is not None:
@@ -391,14 +393,14 @@ class FleetManager(Node):
                     self.path_pub.publish(robot.last_path_request)
                 return
 
-            # Note: robot.state is of type RobotState 
+            # Note: robot.state is of type RobotState
             robot.state = msg
             # Check if robot has reached destination
             # Note: case 2 - message not expired, but robot reached destination
             if robot.destination is None:
                 return
 
-            # Note: case 3 - message not expired, robot hasn't reached destination, 
+            # Note: case 3 - message not expired, robot hasn't reached destination,
             #           but in idle mode or charging mode, and no path left, then
             #           robot must've reached destination
             if (
@@ -420,7 +422,7 @@ class FleetManager(Node):
                 robot.last_completed_request = completed_request
 
     def dock_summary_cb(self, msg):
-        # Note: understand each key in msg.docks as a starting point to represent a task, 
+        # Note: understand each key in msg.docks as a starting point to represent a task,
         #           and each task is to be completed by one fleet (type) of robots
         for fleet in msg.docks:
             if (fleet.fleet_name == self.fleet_name):
