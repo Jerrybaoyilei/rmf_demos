@@ -48,7 +48,7 @@ from .RobotClientAPI import RobotAPI
 
 import logging
 logging.basicConfig(
-    filename='/home/jbao/rmf_ws/log/jerry_log/fleet_adapter.log', level=logging.INFO)
+    filename='/home/jbao/jerry_log/rmf_demo_log/fleet_adapter.log', level=logging.INFO)
 # ------------------------------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------------------------------

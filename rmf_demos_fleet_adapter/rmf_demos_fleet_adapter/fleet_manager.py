@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import logging
 import sys
 import math
@@ -53,7 +54,7 @@ import threading
 app = FastAPI()
 
 logging.basicConfig(
-    filename='/home/jbao/rmf_ws/log/jerry_log/fleet_manager.log', level=logging.INFO)
+    filename='/home/jbao/jerry_log/rmf_demo_log/fleet_manager.log', level=logging.INFO)
 
 # Note: think Student, Delivery, etc. Real world objects.
 #           doc: https://docs.pydantic.dev/latest/
